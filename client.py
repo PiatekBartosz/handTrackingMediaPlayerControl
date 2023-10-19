@@ -3,6 +3,8 @@ import socket
 import argparse
 from time import sleep
 import numpy as np
+import base64
+# import imutils
 
 class UDP_client:
     def __init__(self, args) -> None:
@@ -19,21 +21,16 @@ class UDP_client:
 
     def run(self):
         cap = cv2.VideoCapture(0)
-
         while True:
-            ret, frame = cap.read()
-            if ret:
-                self.send_data(frame)
+            _,frame = cap.read()
+            # frame = imutils.resize(frame,width=400) # optional frame resize
+            cv2.imshow("Client", frame)
+            self.send_data(frame)
+            if cv2.waitKey(1) == ord("q"):
+                break
 
     def send_data(self, data):
-        # check if data is a string
-        if isinstance(data, str):
-             encoded_data = data.encode('utf-8')
-
-        # check if data is an opencv frame (numpy nd array)
-        elif self.is_opencv_frame(data):
-            encoded_data = self.encode_opencv_frame(data)
-
+        encoded_data = self.encode_opencv_frame(data)
         self.client_socket.sendto(encoded_data, (self.host_ip, self.PORT))
 
     def receive_data(self):
@@ -48,10 +45,10 @@ class UDP_client:
         pass
 
     def encode_opencv_frame(self, data_to_encode):
-        # encode opencv from into JPG file and then later into binary data
-        _, jpg_data = cv2.imencode(".jpg", data_to_encode)
-        binary_data = jpg_data.tobytes()
-        return binary_data
+        # encode opencv from into JPG file and then later into base64 format
+        _, jpg_data = cv2.imencode(".jpg", data_to_encode,[cv2.IMWRITE_JPEG_QUALITY,80])
+        base64message = base64.b64encode(jpg_data)
+        return base64message
 
     def decode_opencv_frame(self, data_to_decode):
         # decode binary data into opencv frame
@@ -65,8 +62,8 @@ class UDP_client:
                 return True
         return False
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--ip", help="Pass ip of the server", default='localhost', 
