@@ -1,5 +1,6 @@
 import cv2
 import socket
+import numpy as np
 
 class UDP_server:
     def __init__(self):
@@ -10,6 +11,8 @@ class UDP_server:
         self.PORT = 9999
         self.host_name = socket.gethostname()
         self.host_ip = socket.gethostbyname(self.host_name)
+        self.client_connected = False
+        self.server_socket = None
 
     def start_server(self):
         # we create socket object, assign adress family & socket type
@@ -25,23 +28,45 @@ class UDP_server:
             print(e)
             exit()
 
+        self.client_handle()
+
+    def client_handle(self):
+        while True:
+            frame = self.receive_data()
+            cv2.imshow("Server side", frame)
+            if cv2.waitKey(1) == ord("q"):
+                break
+
     def receive_data(self):
-        pass
+        packet = self.server_socket.recvfrom(self.BUFF_SIZE)
+        return self.decode_data_frame(packet)
 
     def send_response(self):
+        # TODO
         pass
 
     def close(self):
-        pass
+        self.server_socket.close()
 
     def handle_errors(self):
+        # TODO handle errors
         pass
+
+    def encode_opencv_frame(self, data_to_encode):
+        # encode opencv from into JPG file and then later into binary data
+        _, jpg_data = cv2.imencode(".jpg", data_to_encode)
+        binary_data = jpg_data.tobytes()
+        return binary_data
+
+    def decode_opencv_frame(self, data_to_decode):
+        # decode binary data into opencv frame
+        img_encoded = np.frombuffer(data_to_decode, dtype=np.uint8)
+        frame = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
+        return frame
 
 
 if __name__ == '__main__':
     server = UDP_server()
     server.start_server()
-
-    while True:
-        pass
+    server.client_handle()
 

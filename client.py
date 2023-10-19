@@ -1,7 +1,8 @@
-# import cv2 
+import cv2 
 import socket
 import argparse
 from time import sleep
+import numpy as np
 
 class UDP_client:
     def __init__(self, args) -> None:
@@ -16,28 +17,53 @@ class UDP_client:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)
 
-    # def run(self) -> None:
-    #     while True:
-    #         self.send_message(self.test_mesasge)
+    def run(self):
+        cap = cv2.VideoCapture(0)
 
-    # def send_message(self, message) -> None:
-    #     if isinstance(message, str):
-    #         message = message.encode('utf-8')
-
-    #     self.client_socket.sendto(message, (self.host_ip, self.PORT))
+        while True:
+            ret, frame = cap.read()
+            if ret:
+                self.send_data(frame)
 
     def send_data(self, data):
-        pass
+        # check if data is a string
+        if isinstance(data, str):
+             encoded_data = data.encode('utf-8')
+
+        # check if data is an opencv frame (numpy nd array)
+        elif self.is_opencv_frame(data):
+            encoded_data = self.encode_opencv_frame(data)
+
+        self.client_socket.sendto(encoded_data, (self.host_ip, self.PORT))
 
     def receive_data(self):
+        # TODO
         pass
 
     def close_connection(self):
-        self.client_socket.cloase()
+        self.client_socket.close()
 
     def handle_errors(self):
+        # TODO
         pass
 
+    def encode_opencv_frame(self, data_to_encode):
+        # encode opencv from into JPG file and then later into binary data
+        _, jpg_data = cv2.imencode(".jpg", data_to_encode)
+        binary_data = jpg_data.tobytes()
+        return binary_data
+
+    def decode_opencv_frame(self, data_to_decode):
+        # decode binary data into opencv frame
+        img_encoded = np.frombuffer(data_to_decode, dtype=np.uint8)
+        frame = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
+        return frame
+
+    def is_opencv_frame(self, item):
+        if isinstance(item, np.ndarray):
+            if len(item.shape) == 2 or (len(item.shape) == 3 and item.shape[2] in [1, 3, 4]):
+                return True
+        return False
 
 if __name__ == "__main__":
 
