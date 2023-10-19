@@ -11,6 +11,7 @@ class UDP_server:
         self.host_name = socket.gethostname()
         self.host_ip = socket.gethostbyname(self.host_name)
 
+    def start_server(self):
         # we create socket object, assign adress family & socket type
         # SOCK_STREAM type is used for TCP connection 
         # SOCK_DGRAM type is used for UDP connection
@@ -24,20 +25,23 @@ class UDP_server:
             print(e)
             exit()
 
-    def run(self) -> None:
+    def receive_data(self):
         pass
 
-    def send_str(self) -> None:
+    def send_response(self):
         pass
 
-    def receive_str(self) -> None:
+    def close(self):
         pass
 
-    def receive_frame(self) -> None:
+    def handle_errors(self):
         pass
 
 
 if __name__ == '__main__':
     server = UDP_server()
-    server.run()
+    server.start_server()
+
+    while True:
+        pass
 

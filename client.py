@@ -14,19 +14,30 @@ class UDP_client:
         self.PORT = args.port
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)        
+        self.client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)
 
+    # def run(self) -> None:
+    #     while True:
+    #         self.send_message(self.test_mesasge)
 
-    def run(self) -> None:
-        while True:
-            self.send_message(self.test_mesasge)
+    # def send_message(self, message) -> None:
+    #     if isinstance(message, str):
+    #         message = message.encode('utf-8')
 
-    def send_message(self, message) -> None:
-        if isinstance(message, str):
-            message = message.encode('utf-8')
+    #     self.client_socket.sendto(message, (self.host_ip, self.PORT))
 
-        self.client_socket.sendto(message, (self.host_ip, self.PORT))
-        
+    def send_data(self, data):
+        pass
+
+    def receive_data(self):
+        pass
+
+    def close_connection(self):
+        self.client_socket.cloase()
+
+    def handle_errors(self):
+        pass
+
 
 if __name__ == "__main__":
 
