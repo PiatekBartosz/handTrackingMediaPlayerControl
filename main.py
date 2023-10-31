@@ -3,14 +3,14 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-from pynput.keyboard import Key, Controller
+# from pynput.keyboard import Key, Controller
 from time import sleep
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 
-keyboard = Controller()
+# keyboard = Controller()
 
 # load gesture model
 model = load_model('model')
@@ -66,28 +66,28 @@ with mp_hands.Hands(
 
         frame = cv2.flip(frame, 1)
 
-        if id:
-            # volume up
-            if id == 2:
-                keyboard.press(Key.media_volume_up)
-                keyboard.release(Key.media_volume_up)
+        # if id:
+        #     # volume up
+        #     if id == 2:
+        #         keyboard.press(Key.media_volume_up)
+        #         keyboard.release(Key.media_volume_up)
 
-            # volume down
-            if id == 3:
-                keyboard.press(Key.media_volume_down)
-                keyboard.release(Key.media_volume_down)
+        #     # volume down
+        #     if id == 3:
+        #         keyboard.press(Key.media_volume_down)
+        #         keyboard.release(Key.media_volume_down)
 
-            # play/pause
-            if id == 8:
-                keyboard.press(Key.media_play_pause)
-                keyboard.release(Key.media_play_pause)
-                sleep(0.5)
+        #     # play/pause
+        #     if id == 8:
+        #         keyboard.press(Key.media_play_pause)
+        #         keyboard.release(Key.media_play_pause)
+        #         sleep(0.5)
 
-            # mute
-            if id == 1:
-                keyboard.press(Key.media_volume_mute)
-                keyboard.release(Key.media_volume_mute)
-                sleep(0.5)
+        #     # mute
+        #     if id == 1:
+        #         keyboard.press(Key.media_volume_mute)
+        #         keyboard.release(Key.media_volume_mute)
+        #         sleep(0.5)
 
         cv2.putText(frame, gesture, (20, 20), cv2.FONT_HERSHEY_SIMPLEX,
                     1, (0, 0, 255), 2, cv2.LINE_AA)
