@@ -1,6 +1,7 @@
 import mediapipe as mp 
 import numpy as np
 import cv2
+import time
 
 colors = [
     (0, 0, 255),   # Red
@@ -81,13 +82,17 @@ options = GestureRecognizerOptions(
     base_options=BaseOptions(model_asset_path='model/gesture_recognizer.task'),
     running_mode=VisionRunningMode.IMAGE)
 
+# variables for calculating FPS
+prev_frame = 0
+new_frame = 0
+
 with GestureRecognizer.create_from_options(options) as recognizer:
     while True:
         ret, frame = cap.read()
 
         if not ret:
             print("Empty camera frame")
-            continue
+            break
 
         mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
 
@@ -96,6 +101,14 @@ with GestureRecognizer.create_from_options(options) as recognizer:
         if results.hand_landmarks != []:
             # for hand_landmark in results.hand_landmarks:
             draw_handmarks_and_gesture(frame, results)
+
+        # calculate FPS
+        new_frame = time.time()
+        fps = str(int(1/(new_frame - prev_frame)))
+        prev_frame = new_frame
+
+        # draw FPS
+        cv2.putText(frame, fps, (frame.shape[1] - 50, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3, cv2.LINE_AA)
 
         cv2.imshow("frame", frame)
 
