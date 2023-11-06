@@ -1,13 +1,76 @@
 import mediapipe as mp 
 import numpy as np
 import cv2
-from mediapipe import ImageFormat
+
+colors = [
+    (0, 0, 255),   # Red
+    (0, 128, 255), # Orange
+    (0, 255, 255), # Yellow
+    (0, 255, 0),   # Green
+    (255, 128, 0), # Light Blue
+    (255, 0, 0),   # Blue
+    (255, 0, 128), # Purple
+    (128, 0, 255), # Pink
+    (0, 0, 128),   # Dark Red
+    (0, 128, 128), # Dark Orange
+    (0, 255, 128), # Dark Yellow
+    (0, 128, 0),   # Dark Green
+    (128, 128, 0), # Olive
+    (128, 0, 128), # Dark Purple
+    (128, 0, 0),   # Dark Blue
+    (128, 0, 64),  # Dark Pink
+    (64, 0, 128),  # Light Purple
+    (64, 0, 0),    # Dark Brown
+    (192, 192, 192), # Light Grey
+    (128, 128, 128), # Grey
+    (220, 220, 220)  # White
+]
+
+def draw_handmarks_and_gesture(frame, results):
+    h, w, _ = frame.shape
+    black_color = (0, 0, 0)
+    dots_colors = []
+    landmarks_points = []
+    landmarks_list = results.hand_landmarks[0]
+    
+    if results.gestures:
+        gesture = results.gestures[0][0].category_name
+    else:
+        gesture = None
+    
+    # draw points for landmarks
+    for idx, item in enumerate(landmarks_list):
+        # convert normalized value to point on a frame
+        x_frame = int(item.x * w)
+        y_frame = int(item.y * h)
+        landmarks_points.append((x_frame, y_frame))
+        cv2.circle(frame, (x_frame, y_frame), 3, colors[idx], 2)
+
+    # connect points
+    connection_color = (20, 20, 20)
+    # draw thumb -> landmarks <0, 4>
+    for i in range(0, 4):
+        cv2.line(frame, landmarks_points[i], landmarks_points[i+1], connection_color, 2)
+    
+    # draw palm
+    cv2.line(frame, landmarks_points[0], landmarks_points[5], connection_color, 2)
+    cv2.line(frame, landmarks_points[0], landmarks_points[17], connection_color, 2)
+    for i in range(5, 17, 4):
+        cv2.line(frame, landmarks_points[i], landmarks_points[i+4], connection_color, 2)
+
+    # draw fingers
+    for i in range(5, 21, 4):
+        for j in range(3):
+            cv2.line(frame, landmarks_points[i+j], landmarks_points[i+j+1], connection_color, 2)
+
+    # print gesture name
+    if gesture != None:
+        cv2.putText(frame, gesture, (20, 60), cv2.FONT_HERSHEY_COMPLEX, 1, colors[3], 2)
 
 cap = cv2.VideoCapture(0)
 
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
 
 BaseOptions = mp.tasks.BaseOptions
 GestureRecognizer = mp.tasks.vision.GestureRecognizer
@@ -26,39 +89,13 @@ with GestureRecognizer.create_from_options(options) as recognizer:
             print("Empty camera frame")
             continue
 
-        mp_frame = mp.Image(image_format=ImageFormat.SRGB, data=frame)
+        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
 
-        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = recognizer.recognize(mp_frame)
 
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-
-        if results.hand_landmarks:
-            landmarks = []
-            # iterate over "hands"
-            for hand_landmark in results.hand_landmarks:
-
-                # iterate over landmark    
-                for i in range(len(hand_landmark)):
-                    lmx = int(hand_landmark[i].x * frame.shape[0])
-                    lmy = int(hand_landmark[i].y * frame.shape[1])
-                    landmarks.append([lmx, lmy])
-
-                mp_drawing.draw_landmarks(
-                    frame,
-                    hand_landmark,
-                    mp_hands.HAND_CONNECTIONS
-                )
-
-                # # predict gesture
-                # prediction = model.predict([landmarks])
-
-                # # get ID
-                # id = np.argmax(prediction)
-                # if id > 0 and id < len(class_names):
-                #     gesture = class_names[id]
-
-        frame = cv2.flip(frame, 1)
+        if results.hand_landmarks != []:
+            # for hand_landmark in results.hand_landmarks:
+            draw_handmarks_and_gesture(frame, results)
 
         cv2.imshow("frame", frame)
 
