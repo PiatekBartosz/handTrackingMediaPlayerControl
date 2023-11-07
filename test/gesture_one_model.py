@@ -94,7 +94,9 @@ with GestureRecognizer.create_from_options(options) as recognizer:
             print("Empty camera frame")
             break
 
-        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+        frame_tmp = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_tmp)
 
         results = recognizer.recognize(mp_frame)
 
