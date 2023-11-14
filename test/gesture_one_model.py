@@ -87,6 +87,14 @@ options = GestureRecognizerOptions(
 prev_frame = 0
 new_frame = 0
 
+# this function is responsible creating a threaded method in MediaKeyController class
+def threaded(fn):
+    def wrapper(*args, **kwargs):
+        th = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread.start()
+        return thread
+    return wrapper
+
 class MediaKeyController:
     MEDIA_KEY_PAUSE_DELAY = 20
     GESTURE_RECOGNITION_MIN_TIME = 50
@@ -106,6 +114,7 @@ class MediaKeyController:
         else:
             self.gesture_time = 0
 
+    @threaded 
     def _toggle(self):
         self.keyboard.press(Key.media_play_pause)
         time.sleep(0.2)
@@ -114,29 +123,20 @@ class MediaKeyController:
 media_key_controller = MediaKeyController()
 
 with GestureRecognizer.create_from_options(options) as recognizer:
+    while True:
+        ret, frame = cap.read()
 
-    while True: 
-        ret, frame = cap.read() 
-       
         if not ret:
             print("Empty camera frame")
             break
 
-        frame_tmp = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_tmp)
+        mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
 
         results = recognizer.recognize(mp_frame)
 
         if results.hand_landmarks != []:
             # for hand_landmark in results.hand_landmarks:
             draw_handmarks_and_gesture(frame, results)
-
-            # gesture
-            if results.gestures:
-                gesture = results.gestures[0][0].category_name
-
-                media_key_controller.gesure_recognize(gesture)
 
         # calculate FPS
         new_frame = time.time()

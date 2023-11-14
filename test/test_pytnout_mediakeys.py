@@ -1,29 +1,43 @@
 from pynput import keyboard
-import time
+from pynput.keyboard import Key, Controller
 
-pressed_keys = set()
+# Create a keyboard controller
+keyboard_controller = Controller()
 
+# Define the mapping of regular keys to media keys
+key_mapping = {
+    'a': Key.media_volume_mute,
+    'b': Key.media_volume_down,
+    'c': Key.media_volume_up,
+    'd': Key.media_play_pause, 
+    'e': Key.media_previous,
+    'f': Key.media_next, 
+    'g': Key.media
+    # Add more key mappings as needed
+}
+
+# Function to handle key press
 def on_press(key):
     try:
-        print('Key {} pressed.'.format(key.char))
+        # Map regular key to media key and simulate key press
+        media_key = key_mapping.get(key.char)
+        if media_key:
+            keyboard_controller.press(media_key)
     except AttributeError:
-        print('Special key {} pressed.'.format(key))
-        pressed_keys.add(key)
+        # Handle special keys (non-character keys)
+        pass
 
+# Function to handle key release
 def on_release(key):
-    print('Key {} released.'.format(key))
-    if key in pressed_keys:
-        pressed_keys.remove(key)
-        print('Media key {} pressed and released.'.format(key))
+    try:
+        # Map regular key to media key and simulate key release
+        media_key = key_mapping.get(key.char)
+        if media_key:
+            keyboard_controller.release(media_key)
+    except AttributeError:
+        # Handle special keys (non-character keys)
+        pass
 
-    if key == keyboard.Key.esc:
-        # Stop listener
-        return False
-
-def media_key_test():
-    print("Press and release some media keys (e.g., play/pause, volume up/down)...")
-    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-        listener.join()
-
-if __name__ == "__main__":
-    media_key_test()
+# Set up the listener
+with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+    listener.join()
