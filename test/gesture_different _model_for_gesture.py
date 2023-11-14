@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-# from pynput.keyboard import Key, Controller
+from pynput.keyboard import Key, Controller
 from time import sleep
 
 mp_drawing = mp.solutions.drawing_utils

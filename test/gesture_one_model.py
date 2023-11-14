@@ -2,6 +2,7 @@ import mediapipe as mp
 import numpy as np
 import cv2
 import time
+from pynput.keyboard import Key, Controller
 
 colors = [
     (0, 0, 255),   # Red
@@ -86,10 +87,37 @@ options = GestureRecognizerOptions(
 prev_frame = 0
 new_frame = 0
 
-with GestureRecognizer.create_from_options(options) as recognizer:
-    while True:
-        ret, frame = cap.read()
+class MediaKeyController:
+    MEDIA_KEY_PAUSE_DELAY = 20
+    GESTURE_RECOGNITION_MIN_TIME = 50
 
+    def __init__(self):
+        self.keyboard = Controller()  
+        self.gesture_time = 0 
+        self.toggle_time = 0 
+        self.prev_time = time.time()
+
+    def gesure_recognize(self, gesture):
+        if gesture == "Closed_Fist":
+            self.gesture_time += time.time() - self.prev_time 
+            if self.gesture_time > self.GESTURE_RECOGNITION_MIN_TIME: 
+                self._toggle()
+                self.gesture_time = 0
+        else:
+            self.gesture_time = 0
+
+    def _toggle(self):
+        self.keyboard.press(Key.media_play_pause)
+        time.sleep(0.2)
+        self.keyboard.release(Key.media_play_pause)
+
+media_key_controller = MediaKeyController()
+
+with GestureRecognizer.create_from_options(options) as recognizer:
+
+    while True: 
+        ret, frame = cap.read() 
+       
         if not ret:
             print("Empty camera frame")
             break
@@ -103,6 +131,12 @@ with GestureRecognizer.create_from_options(options) as recognizer:
         if results.hand_landmarks != []:
             # for hand_landmark in results.hand_landmarks:
             draw_handmarks_and_gesture(frame, results)
+
+            # gesture
+            if results.gestures:
+                gesture = results.gestures[0][0].category_name
+
+                media_key_controller.gesure_recognize(gesture)
 
         # calculate FPS
         new_frame = time.time()
