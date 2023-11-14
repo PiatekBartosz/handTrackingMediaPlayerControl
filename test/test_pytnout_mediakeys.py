@@ -12,7 +12,6 @@ key_mapping = {
     'd': Key.media_play_pause, 
     'e': Key.media_previous,
     'f': Key.media_next, 
-    'g': Key.media
     # Add more key mappings as needed
 }
 
