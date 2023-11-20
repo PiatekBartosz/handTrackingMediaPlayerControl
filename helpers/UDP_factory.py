@@ -3,7 +3,7 @@ import numpy as np
 import base64
 import socket
 import imutils
-
+from queue import Queue
 
 class UDP_factory:
     BUFF_SIZE = 655536
@@ -74,7 +74,8 @@ class UDP_client(UDP_factory):
 class UDP_server(UDP_factory):
     def __init__(self, ip: str, port: int) -> None:
         super().__init__(ip, port)
-
+        self.queue = Queue(maxsize=10)
+        
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)
@@ -102,4 +103,11 @@ class UDP_server(UDP_factory):
                     self.close()
                     break
 
+    def enqueue(self, item: np.ndarray) -> None:
+        if self.queue.full:
+            self.queue.get()
+        self.queue.put(item)
 
+    def dequeue(self):
+        return self.queue.get()
+        
