@@ -1,6 +1,7 @@
 import cv2
 import socket
 import numpy as np
+import base64
 
 class UDP_server:
     def __init__(self):
@@ -10,7 +11,8 @@ class UDP_server:
         self.BUFF_SIZE = 655536 
         self.PORT = 9999
         self.host_name = socket.gethostname()
-        self.host_ip = socket.gethostbyname(self.host_name)
+        # self.host_ip = socket.gethostbyname(self.host_name)
+        self.host_ip = "localhost"
         self.client_connected = False
         self.server_socket = None
         self.socket_address = None
@@ -32,12 +34,14 @@ class UDP_server:
     def client_handle(self):
         while True:
             frame = self.receive_data()
+            
             cv2.imshow("Server side", frame)
+           
             if cv2.waitKey(1) == ord("q"):
                 break
 
     def receive_data(self):
-        packet = self.server_socket.recvfrom(self.BUFF_SIZE)
+        packet, _ = self.server_socket.recvfrom(self.BUFF_SIZE)
         return self.decode_opencv_frame(packet)
 
     def send_response(self):
@@ -57,10 +61,11 @@ class UDP_server:
         binary_data = jpg_data.tobytes()
         return binary_data
 
-    def decode_opencv_frame(self, data_to_decode):
+    def decode_opencv_frame(self, packet):
         # decode binary data into opencv frame
-        img_encoded = np.frombuffer(data_to_decode, dtype=np.uint8)
-        frame = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
+        data = base64.b64decode(packet, ' /')
+        npdata = np.fromstring(data, dtype=np.uint8)
+        frame = cv2.imdecode(npdata, 1)
         return frame
 
 

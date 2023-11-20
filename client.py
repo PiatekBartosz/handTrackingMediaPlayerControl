@@ -22,10 +22,14 @@ class UDP_client:
     def run(self):
         cap = cv2.VideoCapture(0)
         while True:
-            _,frame = cap.read()
+            ret,frame = cap.read()
             # frame = imutils.resize(frame,width=400) # optional frame resize
+            if not ret:
+                break            
+
             cv2.imshow("Client", frame)
             self.send_data(frame)
+            print(f"Frame sent on {self.host_ip}:{self.PORT}")
             if cv2.waitKey(1) == ord("q"):
                 break
 
@@ -50,10 +54,11 @@ class UDP_client:
         base64message = base64.b64encode(jpg_data)
         return base64message
 
-    def decode_opencv_frame(self, data_to_decode):
+    def decode_opencv_frame(self, packet):
         # decode binary data into opencv frame
-        img_encoded = np.frombuffer(data_to_decode, dtype=np.uint8)
-        frame = cv2.imdecode(img_encoded, cv2.IMREAD_COLOR)
+        data = base64.b64decode(packet, ' /')
+        npdata = np.fromstring(data, dtype=np.uint8)
+        frame = cv2.imdecode(npdata, 1)
         return frame
 
     def is_opencv_frame(self, item):
