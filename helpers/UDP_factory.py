@@ -18,8 +18,8 @@ class UDP_factory:
 
     # public methods
     def close(self) -> None:
-        self.running = False
         self.socket.close()
+        self.running = False
 
     # private methods
     def _encode_opencv_frame(self, data_to_encode: np.ndarray) -> bytes:

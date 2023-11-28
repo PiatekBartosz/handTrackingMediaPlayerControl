@@ -2,8 +2,28 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+from pynput.keyboard import Key, Controller
+import threading
+
+class KeypressThread(threading.Thread):
+    def __init__(self, keyborad_controller: Controller, key_pressed: bool):
+        super().__init__()
+
+    def start(self, gesture_type):
+        self.gesture_type = gesture_type
+        super().start()
+
+    def run(self):
+        # TODO for now hardcode gesture
+        mute_key = Key.media_volume_mute
+        self.keyborad_controller.press(mute_key)
+        self.key_pressed = True
+        time.sleep(0.5)
+        self.keyborad_controller.release(mute_key)
+        self.key_pressed = False
 
 
+# this class combines mediapipe gensture recognizer and mediakey press simulator
 class MediapipeRecoginzer:
     COLOR = [
         (0, 0, 255),   # Red
@@ -43,10 +63,16 @@ class MediapipeRecoginzer:
             base_options=self.BaseOptions(model_asset_path='model/gesture_recognizer.task'),
             running_mode=self.VisionRunningMode.IMAGE)
 
+        self.keyborad_controller = Controller()
+        self.key_pressed = False
+        self.mediakeys_thread = KeypressThread(keyborad_controller=self.keyborad_controller, key_pressed=self.key_pressed)
+
     def start(self):
         self.running = True
+        self.mediakeys_thread.start()
 
     def stop(self):
+        self.mediakeys_thread.join()
         self.running = False
 
     def draw_handmarks_and_gesture(self, frame, results) -> np.ndarray:
@@ -59,6 +85,8 @@ class MediapipeRecoginzer:
         
         if results.gestures:
             gesture = results.gestures[0][0].category_name
+            # TODO classify gesture
+
         else:
             gesture = None
         
@@ -96,9 +124,14 @@ class MediapipeRecoginzer:
 
     def recognize(self, frame) -> np.ndarray:
         print("test")
+        frame_cpy = frame.copy()
         with self.GestureRecognizer.create_from_options(self.options) as recognizer:
-            # TODO change SRGB if bad cofdance
-            mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+            # TODO change SRGB if bad confidance
+            mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_cpy)
             results = recognizer.recognize(mp_frame)
-            frame_with_landmarks = self.draw_handmarks_and_gesture(frame, results)
+            if results.gestures and not self.key_pressed:
+                if not self.mediakeys_thread.is_alive():
+                    self.mediakeys_thread.start(results.gestures[0][0].category_name)
+            frame_with_landmarks = self.draw_handmarks_and_gesture(frame_cpy, results)
             return frame_with_landmarks
+

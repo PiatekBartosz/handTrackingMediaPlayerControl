@@ -32,7 +32,8 @@ if __name__ == "__main__":
     server_thread.start()
 
     # mediapipe thread
-    server.mediapipe_handle()
+    mediapipe_thread = threading.Thread(target=server.mediapipe_handle)
+    mediapipe_thread.start()
 
-
+    # media keys thread
 
