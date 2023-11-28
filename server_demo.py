@@ -1,22 +1,38 @@
 from helpers.UDP_factory import UDP_server
-from helpers.mediapipe_recoginzer import MediapipeRecoginzer
 from queue import Queue
+from argparse import ArgumentParser
 import threading
-
-def server_routine():
-    server.server_handle
-
-def mediapipe_routine():
-    pass
+import socket
 
 if __name__ == "__main__":
-    server = UDP_server("192.168.0.29", 9999)
-    # TODO passing a method via arguments
-    mediapipe = MediapipeRecoginzer(server.dequeue) 
+    parser = ArgumentParser()
+    parser.add_argument("-i", "--ip", help="Server ip",  type=str)
+    parser.add_argument("-p", "--port", help="Server port", default=9999, type=int)
+    args = parser.parse_args()
 
+    if args.ip:
+        server_ip = args.ip 
+    else:
+        # server_ip = "192.168.0.29"
+        tmp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        tmp_sock.connect(("9.9.9.9", 80))
+        server_ip = tmp_sock.getsockname()[0]
+        tmp_sock.close()
+
+    if args.port:
+        server_port = args.port
+    else:
+        server_port = 9999
+
+    server = UDP_server(server_ip, server_port)
     server.start_server()
-    server_thread = threading.Thread(target=server_routine) 
+
+    # server thread
+    server_thread = threading.Thread(target=server.client_handle)
     server_thread.start()
-    
-    mediapipe_thread = threading.Thread(target=mediapipe_routine)
-    mediapipe_thread.start()
+
+    # mediapipe thread
+    server.mediapipe_handle()
+
+
+

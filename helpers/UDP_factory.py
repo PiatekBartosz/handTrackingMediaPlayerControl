@@ -3,7 +3,9 @@ import numpy as np
 import base64
 import socket
 import imutils
+import time
 from queue import Queue
+from .mediapipe_recognizer import MediapipeRecoginzer
 
 class UDP_factory:
     BUFF_SIZE = 655536
@@ -46,6 +48,9 @@ class UDP_client(UDP_factory):
     # thread routine
     def client_routine(self) -> None:
         cap = cv2.VideoCapture(0)
+        cap.set(cv2.CAP_PROP_FPS, 20)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
         while True:
             ret, frame = cap.read()
@@ -74,7 +79,8 @@ class UDP_client(UDP_factory):
 class UDP_server(UDP_factory):
     def __init__(self, ip: str, port: int) -> None:
         super().__init__(ip, port)
-        self.queue = Queue(maxsize=10)
+        self.recognizer = MediapipeRecoginzer()
+        self.queue = Queue(maxsize=1)
         
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -98,16 +104,32 @@ class UDP_server(UDP_factory):
         while True:
             if self.running:
                 frame = self._receive_data()
-                cv2.imshow("Server side", frame)
-                if cv2.waitKey(1) == ord("q"):
-                    self.close()
-                    break
+
+                if frame is not None:
+                    self.enqueue(frame)
+
+    def mediapipe_handle(self) -> None:
+        while True:
+            if self.running:
+                if not self.queue.empty():
+                    frame = self.queue.get()
+                    frame_with_landmarks = self.recognizer.recognize(frame)
+
+                    if frame is not None:
+                        cv2.imshow("Server side", frame)
+
+                    if frame_with_landmarks is not None:
+                        cv2.imshow("Server side with landmarks", frame_with_landmarks)
+
+                    if cv2.waitKey(50) == ord("q"):
+                        self.close()
+                        break
+
+                    
 
     def enqueue(self, item: np.ndarray) -> None:
-        if self.queue.full:
-            self.queue.get()
+        if self.queue.full():
+            # self.queue.get()
+            return
         self.queue.put(item)
 
-    def dequeue(self):
-        return self.queue.get()
-        
