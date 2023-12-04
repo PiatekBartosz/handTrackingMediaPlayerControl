@@ -48,9 +48,14 @@ class UDP_client(UDP_factory):
     # thread routine
     def client_routine(self) -> None:
         cap = cv2.VideoCapture(0)
+
+        # doesn't work on Windows?
         cap.set(cv2.CAP_PROP_FPS, 20)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
+
+        prev_time = 0
+        new_time = 0
 
         while True:
             ret, frame = cap.read()
@@ -60,15 +65,31 @@ class UDP_client(UDP_factory):
                 break
 
             frame = imutils.resize(frame, width=400) 
+            frame_raw = frame.copy()
+
+            # FPS counter
+            new_time = time.time()
+            frame_time = new_time - prev_time
+            if frame_time > 0:
+                FPS_count = 1 // frame_time
+            else:
+                FPS_count = -1
+            prev_time = new_time
+
+            self.show_FPS(frame, FPS_count, frame_time)
             cv2.imshow("Client side", frame)
 
             # resize the image so that it fits UDP communcation data size
-            self._send_data(frame)
+            self._send_data(frame_raw)
             print(f"Frame send on {self.ip}:{self.port}")
             
             if cv2.waitKey(1) == ord("q"):
                 self.close()
                 break
+        
+    def show_FPS(self, frame, FPS_count: int, FrameTime: float) -> None:
+        frame = cv2.putText(frame, f"FPS: {FPS_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        frame = cv2.putText(frame, f"FrameTime: {FrameTime:.2f}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             
 
     def _send_data(self, data: np.ndarray) -> None:
@@ -109,23 +130,38 @@ class UDP_server(UDP_factory):
                     self.enqueue(frame)
 
     def mediapipe_handle(self) -> None:
+        prev_time = 0
+        new_time = 0
         while True:
             if self.running:
                 if not self.queue.empty():
                     frame = self.queue.get()
                     frame_with_landmarks = self.recognizer.recognize(frame)
 
+                    # FPS counter
+                    new_time = time.time()
+                    frame_time = new_time - prev_time
+                    if frame_time > 0:
+                        FPS_count = 1 // frame_time
+                    else:
+                        FPS_count = -1
+                    prev_time = new_time
+
                     if frame is not None:
+                        self.show_FPS(frame, FPS_count, frame_time)
                         cv2.imshow("Server side", frame)
 
                     if frame_with_landmarks is not None:
+                        self.show_FPS(frame_with_landmarks, FPS_count, frame_time)
                         cv2.imshow("Server side with landmarks", frame_with_landmarks)
 
                     if cv2.waitKey(50) == ord("q"):
                         self.close()
                         break
 
-                    
+    def show_FPS(self, frame, FPS_count: int, FrameTime: float) -> None:
+        frame = cv2.putText(frame, f"FPS: {FPS_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        frame = cv2.putText(frame, f"FrameTime: {FrameTime:.2f} ms", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     def enqueue(self, item: np.ndarray) -> None:
         if self.queue.full():

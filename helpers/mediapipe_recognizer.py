@@ -4,23 +4,23 @@ import numpy as np
 import time
 from pynput.keyboard import Key, Controller
 import threading
+from queue import Queue
 
 class KeypressThread(threading.Thread):
     def __init__(self, keyborad_controller: Controller, key_pressed: bool):
+        self.gesture_queue = Queue()
         super().__init__()
 
-    def start(self, gesture_type):
-        self.gesture_type = gesture_type
-        super().start()
-
     def run(self):
-        # TODO for now hardcode gesture
-        mute_key = Key.media_volume_mute
-        self.keyborad_controller.press(mute_key)
-        self.key_pressed = True
-        time.sleep(0.5)
-        self.keyborad_controller.release(mute_key)
-        self.key_pressed = False
+        while True:
+            if not self.gesture_queue.empty():
+                print("Queue: ", self.gesture_queue.get())
+                # mute_key = Key.media_volume_mute
+                # self.keyborad_controller.press(mute_key)
+                # self.key_pressed = True
+                # time.sleep(0.5)
+                # self.keyborad_controller.release(mute_key)
+                # self.key_pressed = False
 
 
 # this class combines mediapipe gensture recognizer and mediakey press simulator
@@ -117,7 +117,7 @@ class MediapipeRecoginzer:
 
         # print gesture name
         if gesture != None:
-            cv2.putText(frame, gesture, (20, 60), cv2.FONT_HERSHEY_COMPLEX, 1, self.COLOR[3], 2)
+            cv2.putText(frame, gesture, (20, 200), cv2.FONT_HERSHEY_COMPLEX, 1, self.COLOR[3], 2)
 
         return frame
             
@@ -131,7 +131,7 @@ class MediapipeRecoginzer:
             results = recognizer.recognize(mp_frame)
             if results.gestures and not self.key_pressed:
                 if not self.mediakeys_thread.is_alive():
-                    self.mediakeys_thread.start(results.gestures[0][0].category_name)
+                    self.mediakeys_thread.gesture_queue.put(results.gestures[0][0].category_name)
             frame_with_landmarks = self.draw_handmarks_and_gesture(frame_cpy, results)
             return frame_with_landmarks
 

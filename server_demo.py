@@ -13,7 +13,7 @@ if __name__ == "__main__":
     if args.ip:
         server_ip = args.ip 
     else:
-        # server_ip = "192.168.0.29"
+        # server_ip = "localhost"
         tmp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         tmp_sock.connect(("9.9.9.9", 80))
         server_ip = tmp_sock.getsockname()[0]
