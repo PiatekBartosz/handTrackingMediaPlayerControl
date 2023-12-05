@@ -9,6 +9,30 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
 
+COLOR = [ (0, 0, 255),   # Red
+    (0, 128, 255),  # Orange
+    (0, 255, 255),  # Yellow
+    (0, 255, 0),   # Green
+    (255, 128, 0),  # Light Blue
+    (255, 0, 0),   # Blue
+    (255, 0, 128),  # Purple
+    (128, 0, 255),  # Pink
+    (0, 0, 128),   # Dark Red
+    (0, 128, 128),  # Dark Orange
+    (0, 255, 128),  # Dark Yellow
+    (0, 128, 0),   # Dark Green
+    (128, 128, 0),  # Olive
+    (128, 0, 128),  # Dark Purple
+    (128, 0, 0),   # Dark Blue
+    (128, 0, 64),  # Dark Pink
+    (64, 0, 128),  # Light Purple
+    (64, 0, 0),    # Dark Brown
+    (192, 192, 192),  # Light Grey
+    (128, 128, 128),  # Grey
+    (220, 220, 220)  # White
+]
+
+
 
 def draw_handmarks(frame, results) -> np.ndarray:
     if results.hand_landmarks == []:
@@ -24,7 +48,7 @@ def draw_handmarks(frame, results) -> np.ndarray:
         x_frame = int(item.x * w)
         y_frame = int(item.y * h)
         landmarks_points.append((x_frame, y_frame))
-        cv2.circle(frame, (x_frame, y_frame), 3, self.COLOR[idx], 2)
+        cv2.circle(frame, (x_frame, y_frame), 3, COLOR[idx], 2)
 
     # connect points
     connection_color = (20, 20, 20)
@@ -67,10 +91,16 @@ while True:
     for i in range(len(frame_buffer)):
         frame = frame_buffer[i][0]
 
-        detection_result = detector.detect(frame)
+        frame_cpy_inverted_channels = cv2.cvtColor(
+            frame, cv2.COLOR_BGR2RGB)
+
+        mp_frame = mp.Image(
+            image_format=mp.ImageFormat.SRGB, data=frame_cpy_inverted_channels)
+
+        detection_result = detector.detect(mp_frame)
 
         annotated_image = draw_handmarks(frame, detection_result)
-        cv2_imshow(cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
+        cv2.imshow("test", annotated_image)
 
         if cv2.waitKey(50) == ord('q'):
             break_case = True
