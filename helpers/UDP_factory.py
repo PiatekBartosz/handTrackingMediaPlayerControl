@@ -153,8 +153,8 @@ class UDP_server(UDP_factory):
                         if gesture == "Pointing_Up":
                             frame_buffer = []
 
-                            prev_frame_timer = 0
-                            next_frame_timer = 0
+                            prev_frame_timer = time.time()
+                            next_frame_timer = time.time()
 
                             # TODO check if code viable
                             while len(frame_buffer) < 40:

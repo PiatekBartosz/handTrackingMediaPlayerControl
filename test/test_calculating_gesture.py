@@ -1,37 +1,37 @@
 import pickle
 import cv2
 
-# Test for landmark recoginer
+# # Test for landmark recoginer
 
 # STEP 1: Import the necessary modules.
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
+import time
 
-COLOR = [ (0, 0, 255),   # Red
-    (0, 128, 255),  # Orange
-    (0, 255, 255),  # Yellow
-    (0, 255, 0),   # Green
-    (255, 128, 0),  # Light Blue
-    (255, 0, 0),   # Blue
-    (255, 0, 128),  # Purple
-    (128, 0, 255),  # Pink
-    (0, 0, 128),   # Dark Red
-    (0, 128, 128),  # Dark Orange
-    (0, 255, 128),  # Dark Yellow
-    (0, 128, 0),   # Dark Green
-    (128, 128, 0),  # Olive
-    (128, 0, 128),  # Dark Purple
-    (128, 0, 0),   # Dark Blue
-    (128, 0, 64),  # Dark Pink
-    (64, 0, 128),  # Light Purple
-    (64, 0, 0),    # Dark Brown
-    (192, 192, 192),  # Light Grey
-    (128, 128, 128),  # Grey
-    (220, 220, 220)  # White
-]
-
+COLOR = [(0, 0, 255),   # Red
+         (0, 128, 255),  # Orange
+         (0, 255, 255),  # Yellow
+         (0, 255, 0),   # Green
+         (255, 128, 0),  # Light Blue
+         (255, 0, 0),   # Blue
+         (255, 0, 128),  # Purple
+         (128, 0, 255),  # Pink
+         (0, 0, 128),   # Dark Red
+         (0, 128, 128),  # Dark Orange
+         (0, 255, 128),  # Dark Yellow
+         (0, 128, 0),   # Dark Green
+         (128, 128, 0),  # Olive
+         (128, 0, 128),  # Dark Purple
+         (128, 0, 0),   # Dark Blue
+         (128, 0, 64),  # Dark Pink
+         (64, 0, 128),  # Light Purple
+         (64, 0, 0),    # Dark Brown
+         (192, 192, 192),  # Light Grey
+         (128, 128, 128),  # Grey
+         (220, 220, 220)  # White
+         ]
 
 
 def draw_handmarks(frame, results) -> np.ndarray:
@@ -83,13 +83,19 @@ options = vision.HandLandmarkerOptions(
 
 detector = vision.HandLandmarker.create_from_options(options)
 
-with open("/home/bartek/Programming/handTrackingMediaPlayerControl/test/frame_data4.pickle", "rb") as f:
+with open("/home/bartek/Programming/handTrackingMediaPlayerControl/test/frame_data6.pickle", "rb") as f:
     frame_buffer = pickle.load(f)
 
 while True:
     break_case = False
+    total_delta_x = 0
+    prev_x = 0
+    normalized_det = 0
     for i in range(len(frame_buffer)):
-        frame = frame_buffer[i][0]
+        frame_raw = frame_buffer[i][0]
+        frame = frame_raw.copy()
+
+        frame = cv2.flip(frame, 1)
 
         frame_cpy_inverted_channels = cv2.cvtColor(
             frame, cv2.COLOR_BGR2RGB)
@@ -99,12 +105,27 @@ while True:
 
         detection_result = detector.detect(mp_frame)
 
+        if detection_result.hand_landmarks != []:
+            normalized_det = detection_result.hand_landmarks[0][8].x / 400.0 - 0.5
+            if i != 0:
+                total_delta_x += normalized_det - prev_x
+
         annotated_image = draw_handmarks(frame, detection_result)
         cv2.imshow("test", annotated_image)
 
-        if cv2.waitKey(50) == ord('q'):
+        prev_x = normalized_det
+
+        if cv2.waitKey(10) == ord('q'):
             break_case = True
             break
+
+    print(str(total_delta_x))
+    if total_delta_x > 0:
+        print("swipe right")
+    elif total_delta_x < -0:
+        print("swipe left")
+
+    time.sleep(1)
 
     if break_case:
         break
