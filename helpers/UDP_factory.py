@@ -5,7 +5,7 @@ import socket
 import imutils
 import time
 from queue import Queue
-from .mediapipe_recognizer import MediapipeRecoginzer
+from .mediapipe_recognizer import MediapipeGestureRecoginzer
 # only for debugging
 import pickle
 
@@ -106,7 +106,7 @@ class UDP_client(UDP_factory):
 class UDP_server(UDP_factory):
     def __init__(self, ip: str, port: int) -> None:
         super().__init__(ip, port)
-        self.recognizer = MediapipeRecoginzer()
+        self.recognizer = MediapipeGestureRecoginzer()
         self.queue = Queue(maxsize=1)
 
         try:
@@ -140,11 +140,12 @@ class UDP_server(UDP_factory):
     def mediapipe_handle(self) -> None:
         prev_time = 0
         new_time = 0
+        total_delta_x = 0
         while True:
             if self.running:
                 if not self.queue.empty():
                     frame = self.queue.get()
-                    results, frame_with_landmarks = self.recognizer.recognize(
+                    results, frame_with_landmarks = self.recognizer.recognize_gesture(
                         frame)
 
                     if results.gestures != []:
@@ -156,8 +157,7 @@ class UDP_server(UDP_factory):
                             prev_frame_timer = time.time()
                             next_frame_timer = time.time()
 
-                            # TODO check if code viable
-                            while len(frame_buffer) < 40:
+                            while len(frame_buffer) < 22:
                                 next_frame_timer = time.time()
                                 frame_buffer.append(
                                     (self.queue.get(), next_frame_timer - prev_frame_timer))
@@ -165,21 +165,23 @@ class UDP_server(UDP_factory):
                                 prev_frame_timer = next_frame_timer
 
                             detection_buffer = []
+                            total_delta_x = 0
+                            prev_x = 0
+                            normalized_det = 0
 
                             # detection of buffer
-                            for tup in frame_buffer:
+                            for i, tup in enumerate(frame_buffer):
                                 frame = tup[0]
-                                results, frame_with_landmarks = self.recognizer.recognize(
+                                # TODO check if colision with frmame..landmarks
+                                results, frame_with_landmarks = self.recognizer.recognize_handmarks(
                                     frame)
-                                detection_buffer.append(results)
-
-                            with open("frame_data.pickle", "wb") as f:
-                                pickle.dump(frame_buffer, f)
-
-                            with open("detection_data.pickle", "wb") as f:
-                                pickle.dump(detection_buffer, f)
-
-                            pass
+                                
+                                if results.hand_landmarks != []:
+                                    normalized_det = results.hand_landmarks[0][8].x / 400.0 - 0.5
+                                    if i != 0:
+                                        total_delta_x += normalized_det - prev_x
+                                
+                                prev_x = normalized_det
 
                     # FPS counter
                     new_time = time.time()
@@ -197,8 +199,13 @@ class UDP_server(UDP_factory):
                     if frame_with_landmarks is not None:
                         self.show_FPS(frame_with_landmarks,
                                       FPS_count, frame_time)
+                        if total_delta_x != 0:
+                            gesture_name = "swipe right" if total_delta_x < 0 else "swipe left"
+                            cv2.putText(frame_with_landmarks, gesture_name, (20, 270),
+                                    cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
                         cv2.imshow("Server side with landmarks",
-                                   frame_with_landmarks)
+                                    frame_with_landmarks)
 
                     if cv2.waitKey(50) == ord("q"):
                         self.close()
