@@ -11,11 +11,11 @@ if __name__ == "__main__":
     if args.ip:
         client_ip = args.ip 
     else:
-        # client_ip = "localhost"
-        tmp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        tmp_sock.connect(("9.9.9.9", 80))
-        client_ip = tmp_sock.getsockname()[0]
-        tmp_sock.close()
+        client_ip = "localhost"
+        # tmp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # tmp_sock.connect(("9.9.9.9", 80))
+        # client_ip = tmp_sock.getsockname()[0]
+        # tmp_sock.close()
 
     if args.port:
         client_port = args.port

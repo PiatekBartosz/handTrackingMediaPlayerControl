@@ -52,7 +52,7 @@ class UDP_client(UDP_factory):
 
     # thread routine
     def client_routine(self) -> None:
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
         # doesn't work on Windows?
         cap.set(cv2.CAP_PROP_FPS, 20)

@@ -74,13 +74,13 @@ class MediapipeGestureRecoginzer:
 
         self.gesture_options = self.GestureRecognizerOptions(
             base_options=self.BaseOptions(
-                model_asset_path='model/gesture_recognizer.task'),
+                model_asset_path=r'model/gesture_recognizer.task'),
             running_mode=self.VisionRunningMode.IMAGE)
 
         # Hand landmarks recognizer model ######################################
         VisionRunningMode = mp.tasks.vision.RunningMode
         base_options = python.BaseOptions(
-            model_asset_path='/home/bartek/Programming/handTrackingMediaPlayerControl/test/hand_landmarker.task')
+            model_asset_path=r'model/hand_landmarker.task')
         self.hand_options = vision.HandLandmarkerOptions(
             base_options=base_options, running_mode=VisionRunningMode.IMAGE)
 
@@ -195,7 +195,7 @@ class MediapipeGestureRecoginzer:
         with self.GestureRecognizer.create_from_options(self.gesture_options) as recognizer:
             # TODO change SRGB if bad confidance
             mp_frame = mp.Image(
-                image_format=mp.ImageFormat.SRGB, data=frame_cpy)
+                image_format=mp.ImageFormat.SRGB, data=frame_cpy_inverted_channels)
             results = recognizer.recognize(mp_frame)
             # if results.gestures and not self.key_pressed:
             #     if not self.mediakeys_thread.is_alive():
