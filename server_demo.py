@@ -35,5 +35,5 @@ if __name__ == "__main__":
     mediapipe_thread = threading.Thread(target=server.mediapipe_handle)
     mediapipe_thread.start()
 
-    # media keys thread
-
+    # mediakeys thread
+    server.recognizer.mediakeys_thread.start()

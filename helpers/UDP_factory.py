@@ -5,7 +5,7 @@ import socket
 import imutils
 import time
 from queue import Queue
-from .mediapipe_recognizer import MediapipeGestureRecoginzer
+from .mediapipe_recognizer import MediapipeGestureRecoginzer, KeypressThread
 # only for debugging
 import pickle
 
@@ -182,6 +182,12 @@ class UDP_server(UDP_factory):
                                         total_delta_x += normalized_det - prev_x
                                 
                                 prev_x = normalized_det
+
+                            swipe_gesture = "swipe_right" if total_delta_x < 0 else "swipe_left"
+                            self.recognizer.mediakeys_thread.gesture_queue.put(swipe_gesture)
+
+                        # else:
+                        #     self.recognizer.mediakeys_thread.gesture_queue.put(gesture)
 
                     # FPS counter
                     new_time = time.time()

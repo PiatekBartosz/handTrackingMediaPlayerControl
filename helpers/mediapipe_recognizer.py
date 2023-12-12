@@ -10,21 +10,29 @@ from queue import Queue
 
 
 class KeypressThread(threading.Thread):
-    def __init__(self, keyborad_controller: Controller, key_pressed: bool):
-        self.gesture_queue = Queue()
+    def __init__(self):
+        self.gesture_queue = Queue(1)
+        self.keyborad_controller = Controller()
+        self.key_pressed = False
         super().__init__()
 
     def run(self):
-        pass
-        # while True:
-            # if not self.gesture_queue.empty():
-                # print("Queue: ", self.gesture_queue.get())
-                # mute_key = Key.media_volume_mute
-                # self.keyborad_controller.press(mute_key)
-                # self.key_pressed = True
-                # time.sleep(0.5)
-                # self.keyborad_controller.release(mute_key)
-                # self.key_pressed = False
+        while True:
+            if not self.gesture_queue.empty():
+                gesture = self.gesture_queue.get()
+
+                if gesture == "swipe_right":
+                    key = Key.media_next
+                elif gesture == "swipe_left":
+                    key = Key.media_previous
+
+
+                self.keyborad_controller.press(key)
+                self.key_pressed = True
+                time.sleep(0.5)
+                self.keyborad_controller.release(key)
+                self.key_pressed = False
+            time.sleep(0.5)
 
 
 # this class combines mediapipe gensture recognizer and mediakey press simulator
@@ -77,10 +85,8 @@ class MediapipeGestureRecoginzer:
             base_options=base_options, running_mode=VisionRunningMode.IMAGE)
 
         # Keyboard control #####################################################
-        self.keyborad_controller = Controller()
-        self.key_pressed = False
-        self.mediakeys_thread = KeypressThread(
-            keyborad_controller=self.keyborad_controller, key_pressed=self.key_pressed)
+
+        self.mediakeys_thread = KeypressThread()
 
     def start(self):
         self.running = True
@@ -191,11 +197,11 @@ class MediapipeGestureRecoginzer:
             mp_frame = mp.Image(
                 image_format=mp.ImageFormat.SRGB, data=frame_cpy)
             results = recognizer.recognize(mp_frame)
-            if results.gestures and not self.key_pressed:
-                if not self.mediakeys_thread.is_alive():
-                    gesture = results.gestures[0][0]
-                    self.mediakeys_thread.gesture_queue.put(
-                        gesture)
+            # if results.gestures and not self.key_pressed:
+            #     if not self.mediakeys_thread.is_alive():
+            #         gesture = results.gestures[0][0]
+            #         self.mediakeys_thread.gesture_queue.put(
+            #             gesture)
             frame_with_landmarks = self.draw_handmarks_and_gesture(
                 frame_cpy, results)
             return results, frame_with_landmarks
