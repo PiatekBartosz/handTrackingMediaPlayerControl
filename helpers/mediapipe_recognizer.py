@@ -25,6 +25,14 @@ class KeypressThread(threading.Thread):
                     key = Key.media_next
                 elif gesture == "swipe_left":
                     key = Key.media_previous
+                elif gesture == "Closed_Fist":
+                    key = Key.media_play_pause
+                elif gesture == "Thumb_Up":
+                    key = Key.media_volume_up
+                elif gesture == "Thumb_Down":
+                    key = Key.media_volume_down
+                else:
+                    continue
 
 
                 self.keyborad_controller.press(key)

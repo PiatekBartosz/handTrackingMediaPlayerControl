@@ -186,8 +186,8 @@ class UDP_server(UDP_factory):
                             swipe_gesture = "swipe_right" if total_delta_x < 0 else "swipe_left"
                             self.recognizer.mediakeys_thread.gesture_queue.put(swipe_gesture)
 
-                        # else:
-                        #     self.recognizer.mediakeys_thread.gesture_queue.put(gesture)
+                        elif gesture != "None":
+                            self.recognizer.mediakeys_thread.gesture_queue.put(gesture)
 
                     # FPS counter
                     new_time = time.time()
