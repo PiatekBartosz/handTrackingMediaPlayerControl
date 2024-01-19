@@ -9,10 +9,10 @@ Import conda envinronment from .yaml file
 ## Run
 Run server:
 ```
-python server_app.py
+python server_demo.py
 ```
 
 Run client:
 ```
-python client_app.py
+python client_demo.py
 ```
