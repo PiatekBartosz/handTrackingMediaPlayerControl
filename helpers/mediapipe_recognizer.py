@@ -43,7 +43,6 @@ class KeypressThread(threading.Thread):
             time.sleep(0.5)
 
 
-# this class combines mediapipe gensture recognizer and mediakey press simulator
 class MediapipeGestureRecoginzer:
     COLOR = [
         (0, 0, 255),   # Red
@@ -196,20 +195,14 @@ class MediapipeGestureRecoginzer:
         return frame
 
     def recognize_gesture(self, frame):
-        # print("test")
         frame_cpy = frame.copy()
         frame_cpy_inverted_channels = cv2.cvtColor(
             frame_cpy, cv2.COLOR_BGR2RGB)
         with self.GestureRecognizer.create_from_options(self.gesture_options) as recognizer:
-            # TODO change SRGB if bad confidance
             mp_frame = mp.Image(
                 image_format=mp.ImageFormat.SRGB, data=frame_cpy_inverted_channels)
             results = recognizer.recognize(mp_frame)
-            # if results.gestures and not self.key_pressed:
-            #     if not self.mediakeys_thread.is_alive():
-            #         gesture = results.gestures[0][0]
-            #         self.mediakeys_thread.gesture_queue.put(
-            #             gesture)
+
             frame_with_landmarks = self.draw_handmarks_and_gesture(
                 frame_cpy, results)
             return results, frame_with_landmarks

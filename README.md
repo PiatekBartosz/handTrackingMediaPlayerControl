@@ -7,6 +7,8 @@ This application enables the user to control media player with gesture recogniti
 Import conda envinronment from .yaml file
 
 ## Run
+Note that server and client must be run in different terminals
+
 Run server:
 ```
 python server_demo.py
