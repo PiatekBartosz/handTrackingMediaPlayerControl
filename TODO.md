@@ -1,5 +1,6 @@
 ## Soft
-- Package into one wheel for easy deployment (uv, poetry?)
+- Package into one wheel for easy deployment (uv, poetry?),
+- Add instructions for runnig the program,
 
 ## Report
-- test mediapipe itself and the whole system
+- Test mediapipe itself and the whole system,
