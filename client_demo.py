@@ -4,22 +4,34 @@ import socket
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--ip", help="Pass ip of the server",  default="localhost", type=str)
+    parser.add_argument("-i", "--ip", help="Pass ip of the server", default="localhost", type=str)
     parser.add_argument("-p", "--port", help="Pass port of the server", default=9999, type=int)
     args = parser.parse_args()
 
     if args.ip:
-        client_ip = args.ip 
+        client_ip = args.ip
     else:
         tmp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         tmp_sock.connect(("9.9.9.9", 80))
         client_ip = tmp_sock.getsockname()[0]
         tmp_sock.close()
 
-    if args.port:
-        client_port = args.port
-    else:
-        client_port = 9999
+    client_port = args.port if args.port else 9999
 
     client = UDP_client(client_ip, client_port)
-    client.client_routine()
+
+    try:
+        client.client_routine()
+
+    except KeyboardInterrupt:
+        print("\n[INFO] Client shutting down...")
+
+        # optional: if your client has a running flag
+        if hasattr(client, "running"):
+            client.running = False
+
+        # close socket if exists
+        if hasattr(client, "sock"):
+            client.sock.close()
+
+        print("[INFO] Client stopped.")
