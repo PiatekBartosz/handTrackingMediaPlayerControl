@@ -4,227 +4,223 @@ import base64
 import socket
 import imutils
 import time
+import logging
 from queue import Queue
-from .mediapipe_recognizer import MediapipeGestureRecoginzer, KeypressThread
-# only for debugging
-import pickle
+from .mediapipe_recognizer import MediapipeGestureRecoginzer
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
 
 
 class UDP_factory:
-    BUFF_SIZE = 655536
+    BUFF_SIZE = 65536
 
     def __init__(self, ip: str, port: int) -> None:
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.ip = ip
         self.port = port
         self.socket = None
         self.running = False
 
-    # public methods
     def close(self) -> None:
-        self.socket.close()
+        self.logger.info("Closing socket")
+        if self.socket:
+            self.socket.close()
         self.running = False
 
-    # private methods
-    def _encode_opencv_frame(self, data_to_encode: np.ndarray) -> bytes:
-        # encode opencv from into JPG file and then later into base64 format
-        _, jpg_data = cv2.imencode(".jpg", data_to_encode, [
-                                   cv2.IMWRITE_JPEG_QUALITY, 80])
-        base64message = base64.b64encode(jpg_data)
-        return base64message
+    def _encode_opencv_frame(self, frame: np.ndarray) -> bytes:
+        _, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        return base64.b64encode(jpg)
 
-    def _decode_opencv_frame(self, data_to_decode: bytes) -> np.ndarray:
-        data = base64.b64decode(data_to_decode, ' /')
-        npdata = np.fromstring(data, dtype=np.uint8)
-        frame = cv2.imdecode(npdata, 1)
-        return frame
+    def _decode_opencv_frame(self, data: bytes) -> np.ndarray:
+        decoded = base64.b64decode(data)
+        npdata = np.frombuffer(decoded, dtype=np.uint8)
+        return cv2.imdecode(npdata, cv2.IMREAD_COLOR)
 
 
 class UDP_client(UDP_factory):
     def __init__(self, ip: str, port: int) -> None:
         super().__init__(ip, port)
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.socket.setsockopt(
-                socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)
-            self.running = True
-        except Exception as e:
-            raise (e)
 
-    # thread routine
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_RCVBUF,
+            self.BUFF_SIZE
+        )
+
+        self.running = True
+        self.logger.info(f"Client started -> {ip}:{port}")
+
     def client_routine(self) -> None:
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
-        # doesn't work on Windows?
+        if not cap.isOpened():
+            self.logger.error("Camera failed to open")
+            return
+
         cap.set(cv2.CAP_PROP_FPS, 20)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
-        prev_time = 0
-        new_time = 0
+        prev_time = time.time()
 
         while True:
             ret, frame = cap.read()
 
             if not ret:
+                self.logger.error("Frame capture failed")
                 self.close()
                 break
 
             frame = imutils.resize(frame, width=400)
             frame_raw = frame.copy()
 
-            # FPS counter
-            new_time = time.time()
-            frame_time = new_time - prev_time
-            if frame_time > 0:
-                FPS_count = 1 // frame_time
-            else:
-                FPS_count = -1
-            prev_time = new_time
+            now = time.time()
+            dt = now - prev_time
+            prev_time = now
 
-            self.show_FPS(frame, FPS_count, frame_time)
+            fps = int(1 / dt) if dt > 0 else 0
+
+            self._show_fps(frame, fps, dt)
             cv2.imshow("Client side", frame)
 
-            # resize the image so that it fits UDP communcation data size
             self._send_data(frame_raw)
-            print(f"Frame send on {self.ip}:{self.port}")
+
+            self.logger.debug(f"Frame sent to {self.ip}:{self.port}")
 
             if cv2.waitKey(1) == ord("q"):
                 self.close()
                 break
 
-    def show_FPS(self, frame, FPS_count: int, FrameTime: float) -> None:
-        frame = cv2.putText(
-            frame, f"FPS: {FPS_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        frame = cv2.putText(frame, f"FrameTime: {FrameTime:.2f}", (
-            10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    def _show_fps(self, frame, fps: int, dt: float) -> None:
+        cv2.putText(frame, f"FPS: {fps}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.putText(frame, f"FrameTime: {dt:.3f}s", (10, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    def _send_data(self, data: np.ndarray) -> None:
-        encoded_data = self._encode_opencv_frame(data)
-        self.socket.sendto(encoded_data, (self.ip, self.port))
+    def _send_data(self, frame: np.ndarray) -> None:
+        encoded = self._encode_opencv_frame(frame)
+        self.socket.sendto(encoded, (self.ip, self.port))
 
 
 class UDP_server(UDP_factory):
     def __init__(self, ip: str, port: int) -> None:
         super().__init__(ip, port)
+
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.recognizer = MediapipeGestureRecoginzer()
         self.queue = Queue(maxsize=1)
 
-        try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.socket.setsockopt(
-                socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFF_SIZE)
-        except Exception as e:
-            raise (e)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_RCVBUF,
+            self.BUFF_SIZE
+        )
+
+        self.logger.info("Server initialized")
+
+    def start_server(self) -> None:
+        self.socket.bind((self.ip, self.port))
+        self.running = True
+        self.logger.info(f"Server listening on {self.ip}:{self.port}")
 
     def _receive_data(self) -> np.ndarray:
         packet, _ = self.socket.recvfrom(self.BUFF_SIZE)
         return self._decode_opencv_frame(packet)
 
-    def start_server(self) -> None:
-        try:
-            self.socket.bind((self.ip, self.port))
-            print(f"Server listening on {self.ip}:{self.port}")
-            self.running = True
-        except Exception as e:
-            raise (e)
-
-    # threadroutine
     def client_handle(self) -> None:
         while True:
-            if self.running:
-                frame = self._receive_data()
+            if not self.running:
+                continue
 
-                if frame is not None:
-                    self.enqueue(frame)
+            frame = self._receive_data()
+
+            if frame is not None:
+                self.enqueue(frame)
 
     def mediapipe_handle(self) -> None:
-        prev_time = 0
-        new_time = 0
+        prev_time = time.time()
         total_delta_x = 0
+
         while True:
-            if self.running:
-                if not self.queue.empty():
-                    frame = self.queue.get()
-                    results, frame_with_landmarks = self.recognizer.recognize_gesture(
-                        frame)
+            if not self.running:
+                continue
 
-                    if results.gestures != []:
-                        gesture = results.gestures[0][0].category_name
+            if self.queue.empty():
+                continue
 
-                        if gesture == "Pointing_Up":
-                            frame_buffer = []
+            frame = self.queue.get()
+            results, frame_landmarks = self.recognizer.recognize_gesture(frame)
 
-                            prev_frame_timer = time.time()
-                            next_frame_timer = time.time()
+            if results.gestures:
+                gesture = results.gestures[0][0].category_name
 
-                            while len(frame_buffer) < 22:
-                                next_frame_timer = time.time()
-                                frame_buffer.append(
-                                    (self.queue.get(), next_frame_timer - prev_frame_timer))
+                if gesture == "Pointing_Up":
+                    buffer = []
+                    t_prev = time.time()
 
-                                prev_frame_timer = next_frame_timer
+                    while len(buffer) < 22:
+                        f = self.queue.get()
+                        t_now = time.time()
+                        buffer.append((f, t_now - t_prev))
+                        t_prev = t_now
 
-                            detection_buffer = []
-                            total_delta_x = 0
-                            prev_x = 0
-                            normalized_det = 0
+                    total_delta_x = 0
+                    prev_x = 0
 
-                            # detection of buffer
-                            for i, tup in enumerate(frame_buffer):
-                                frame = tup[0]
-                                # TODO check if colision with frmame..landmarks
-                                results, frame_with_landmarks = self.recognizer.recognize_handmarks(
-                                    frame)
-                                
-                                if results.hand_landmarks != []:
-                                    normalized_det = results.hand_landmarks[0][8].x / 400.0 - 0.5
-                                    if i != 0:
-                                        total_delta_x += normalized_det - prev_x
-                                
-                                prev_x = normalized_det
+                    for i, (frm, _) in enumerate(buffer):
+                        res, _ = self.recognizer.recognize_handmarks(frm)
 
-                            swipe_gesture = "swipe_right" if total_delta_x < 0 else "swipe_left"
-                            self.recognizer.mediakeys_thread.gesture_queue.put(swipe_gesture)
+                        if res.hand_landmarks:
+                            x = res.hand_landmarks[0][8].x / 400.0 - 0.5
 
-                        elif gesture != "None":
-                            self.recognizer.mediakeys_thread.gesture_queue.put(gesture)
+                            if i > 0:
+                                total_delta_x += x - prev_x
 
-                    # FPS counter
-                    new_time = time.time()
-                    frame_time = new_time - prev_time
-                    if frame_time > 0:
-                        FPS_count = 1 // frame_time
-                    else:
-                        FPS_count = -1
-                    prev_time = new_time
+                            prev_x = x
 
-                    if frame is not None:
-                        self.show_FPS(frame, FPS_count, frame_time)
-                        cv2.imshow("Server side", frame)
+                    swipe = "swipe_right" if total_delta_x < 0 else "swipe_left"
+                    self.recognizer.mediakeys_thread.gesture_queue.put(swipe)
 
-                    if frame_with_landmarks is not None:
-                        self.show_FPS(frame_with_landmarks,
-                                      FPS_count, frame_time)
-                        if total_delta_x != 0:
-                            gesture_name = "swipe right" if total_delta_x < 0 else "swipe left"
-                            cv2.putText(frame_with_landmarks, gesture_name, (20, 270),
-                                    cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+                elif gesture != "None":
+                    self.recognizer.mediakeys_thread.gesture_queue.put(gesture)
 
-                        cv2.imshow("Server side with landmarks",
-                                    frame_with_landmarks)
+            now = time.time()
+            dt = now - prev_time
+            prev_time = now
 
-                    if cv2.waitKey(50) == ord("q"):
-                        self.close()
-                        break
+            fps = int(1 / dt) if dt > 0 else 0
 
-    def show_FPS(self, frame, FPS_count: int, FrameTime: float) -> None:
-        frame = cv2.putText(
-            frame, f"FPS: {FPS_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-        frame = cv2.putText(frame, f"FrameTime: {FrameTime:.2f} ms", (
-            10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            if frame is not None:
+                self._show_fps(frame, fps, dt)
+                cv2.imshow("Server side", frame)
+
+            if frame_landmarks is not None:
+                self._show_fps(frame_landmarks, fps, dt)
+
+                if total_delta_x != 0:
+                    name = "swipe right" if total_delta_x < 0 else "swipe left"
+                    cv2.putText(frame_landmarks, name, (20, 270),
+                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
+                cv2.imshow("Server side with landmarks", frame_landmarks)
+
+            if cv2.waitKey(50) == ord("q"):
+                self.close()
+                break
+
+    def _show_fps(self, frame, fps: int, dt: float) -> None:
+        cv2.putText(frame, f"FPS: {fps}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        cv2.putText(frame, f"FrameTime: {dt:.3f}s", (10, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     def enqueue(self, item: np.ndarray) -> None:
         if self.queue.full():
-            # self.queue.get()
             return
         self.queue.put(item)

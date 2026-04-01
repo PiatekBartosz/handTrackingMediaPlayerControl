@@ -4,7 +4,7 @@ import socket
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--ip", help="Pass ip of the server",  type=str)
+    parser.add_argument("-i", "--ip", help="Pass ip of the server",  default="localhost", type=str)
     parser.add_argument("-p", "--port", help="Pass port of the server", default=9999, type=int)
     args = parser.parse_args()
 
