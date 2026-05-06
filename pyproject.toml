@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hand-tracking-media-player-control"
+version = "0.1.0"
+description = "Sterowanie odtwarzaczem mediów gestami dłoni przy użyciu MediaPipe"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "imutils==0.5.4",
+    "matplotlib==3.10.8",
+    "mediapipe==0.10.21",
+    "numpy==1.26.4",
+    "opencv-python==4.9.0.80",
+    "pillow==10.4.0",
+    "protobuf==4.25.3",
+    "pynput==1.8.1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["helpers"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "helpers/",
+    "server_demo.py",
+    "client_demo.py",
+    "model/",
+    "README.md",
+]
