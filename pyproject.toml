@@ -9,14 +9,13 @@ description = "Sterowanie odtwarzaczem mediów gestami dłoni przy użyciu Media
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "imutils==0.5.4",
-    "matplotlib==3.10.8",
-    "mediapipe==0.10.21",
-    "numpy==1.26.4",
-    "opencv-python==4.9.0.80",
-    "pillow==10.4.0",
-    "protobuf==4.25.3",
-    "pynput==1.8.1",
+    "imutils>=0.5.4",
+    "mediapipe==0.10.35",
+    "numpy>=1.26",
+    "pillow>=10.4.0",
+    "pynput>=1.8.1",
+    # opencv-contrib-python jest automatycznie pobierane przez mediapipe 0.10.35
+    # protobuf usunięto — mediapipe 0.10.x używa wewnętrznie flatbuffers
 ]
 
 [tool.hatch.build.targets.wheel]

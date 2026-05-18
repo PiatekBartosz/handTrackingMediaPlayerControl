@@ -18,11 +18,8 @@ Obsługiwane gesty:
 
 - Python 3.10 lub nowszy
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) – menedżer pakietów
-- Modele MediaPipe umieszczone w folderze `model/`:
-  - `model/gesture_recognizer.task`
-  - `model/hand_landmarker.task`
 
-Modele możesz pobrać ze strony [Google MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/gesture_recognizer).
+> **Modele MediaPipe** są pobierane automatycznie przy pierwszym uruchomieniu serwera. Nie trzeba nic robić ręcznie.
 
 ---
 
@@ -105,7 +102,7 @@ uv pip install dist/hand_tracking_media_player_control-0.1.0-*.whl
 
 ### 3. Uruchom skrypty
 
-Po instalacji paczki uruchom skrypty z katalogu projektu (wymagana obecność folderu `model/`):
+Po instalacji paczki uruchom skrypty z katalogu projektu (modele zostaną pobrane automatycznie przy pierwszym starcie):
 
 ```bash
 python server_demo.py
@@ -122,7 +119,7 @@ handTrackingMediaPlayerControl/
 │   ├── __init__.py
 │   ├── UDP_factory.py          # Klasy klienta i serwera UDP
 │   └── mediapipe_recognizer.py # Rozpoznawanie gestów MediaPipe
-├── model/
+├── model/                      # Tworzone automatycznie przy pierwszym starcie (w .gitignore)
 │   ├── gesture_recognizer.task
 │   └── hand_landmarker.task
 ├── server_demo.py              # Punkt startowy serwera

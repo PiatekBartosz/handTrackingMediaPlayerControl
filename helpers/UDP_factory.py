@@ -5,7 +5,7 @@ import socket
 import imutils
 import time
 import logging
-from queue import Queue
+from queue import Queue, Empty
 from .mediapipe_recognizer import MediapipeGestureRecoginzer
 
 
@@ -126,6 +126,7 @@ class UDP_server(UDP_factory):
 
     def start_server(self) -> None:
         self.socket.bind((self.ip, self.port))
+        self.socket.settimeout(1.0)  # allows recvfrom to unblock periodically
         self.running = True
         self.logger.info(f"Server listening on {self.ip}:{self.port}")
 
@@ -134,11 +135,13 @@ class UDP_server(UDP_factory):
         return self._decode_opencv_frame(packet)
 
     def client_handle(self) -> None:
-        while True:
-            if not self.running:
-                continue
-
-            frame = self._receive_data()
+        while self.running:
+            try:
+                frame = self._receive_data()
+            except socket.timeout:
+                continue  # check self.running and retry
+            except OSError:
+                break  # socket was closed
 
             if frame is not None:
                 self.enqueue(frame)
@@ -147,14 +150,12 @@ class UDP_server(UDP_factory):
         prev_time = time.time()
         total_delta_x = 0
 
-        while True:
-            if not self.running:
+        while self.running:
+            try:
+                frame = self.queue.get(timeout=0.1)
+            except Empty:
                 continue
 
-            if self.queue.empty():
-                continue
-
-            frame = self.queue.get()
             results, frame_landmarks = self.recognizer.recognize_gesture(frame)
 
             if results.gestures:
@@ -164,8 +165,11 @@ class UDP_server(UDP_factory):
                     buffer = []
                     t_prev = time.time()
 
-                    while len(buffer) < 22:
-                        f = self.queue.get()
+                    while self.running and len(buffer) < 22:
+                        try:
+                            f = self.queue.get(timeout=0.1)
+                        except Empty:
+                            continue
                         t_now = time.time()
                         buffer.append((f, t_now - t_prev))
                         t_prev = t_now
@@ -186,9 +190,11 @@ class UDP_server(UDP_factory):
 
                     swipe = "swipe_right" if total_delta_x < 0 else "swipe_left"
                     self.recognizer.mediakeys_thread.gesture_queue.put(swipe)
+                    self.recognizer.metrics.record_action()
 
                 elif gesture != "None":
                     self.recognizer.mediakeys_thread.gesture_queue.put(gesture)
+                    self.recognizer.metrics.record_action()
 
             now = time.time()
             dt = now - prev_time

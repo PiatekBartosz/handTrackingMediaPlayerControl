@@ -23,12 +23,13 @@ if __name__ == "__main__":
     server = UDP_server(server_ip, server_port)
     server.start_server()
 
-    server_thread = threading.Thread(target=server.client_handle)
-    mediapipe_thread = threading.Thread(target=server.mediapipe_handle)
+    server_thread = threading.Thread(target=server.client_handle, daemon=True)
+    mediapipe_thread = threading.Thread(target=server.mediapipe_handle, daemon=True)
 
     server_thread.start()
     mediapipe_thread.start()
     server.recognizer.mediakeys_thread.start()
+    server.recognizer.metrics.start_console_reporter(interval=5.0)
 
     try:
         while True:
@@ -38,14 +39,13 @@ if __name__ == "__main__":
         print("\n[INFO] Shutting down...")
 
         server.running = False
+        server.recognizer.mediakeys_thread.running = False
+        server.recognizer.metrics.stop_console_reporter()
+        server.socket.close()
 
-        if hasattr(server, "sock"):
-            server.sock.close()
+        server_thread.join(timeout=3)
+        mediapipe_thread.join(timeout=3)
 
-        server_thread.join()
-        mediapipe_thread.join()
-
-        if server.recognizer.mediakeys_thread.is_alive():
-            server.recognizer.mediakeys_thread.join()
-
+        server.recognizer.metrics.print_summary()
+        server.recognizer.metrics.save_to_file("stats.txt")
         print("[INFO] Server stopped cleanly.")

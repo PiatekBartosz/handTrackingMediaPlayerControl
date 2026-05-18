@@ -7,4 +7,5 @@ venv/
 dist/
 *.egg-info/
 .uv/
+model/
 
