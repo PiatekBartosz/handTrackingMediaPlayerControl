@@ -14,6 +14,8 @@ dependencies = [
     "numpy>=1.26",
     "pillow>=10.4.0",
     "pynput>=1.8.1",
+    "loguru>=0.7",
+    "matplotlib>=3.8",
     # opencv-contrib-python jest automatycznie pobierane przez mediapipe 0.10.35
     # protobuf usunięto — mediapipe 0.10.x używa wewnętrznie flatbuffers
 ]

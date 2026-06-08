@@ -4,29 +4,22 @@ import base64
 import socket
 import imutils
 import time
-import logging
+from loguru import logger
 from queue import Queue, Empty
 from .mediapipe_recognizer import MediapipeGestureRecoginzer
-
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-)
 
 
 class UDP_factory:
     BUFF_SIZE = 65536
 
     def __init__(self, ip: str, port: int) -> None:
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.ip = ip
         self.port = port
         self.socket = None
         self.running = False
 
     def close(self) -> None:
-        self.logger.info("Closing socket")
+        logger.info("Closing socket")
         if self.socket:
             self.socket.close()
         self.running = False
@@ -53,13 +46,13 @@ class UDP_client(UDP_factory):
         )
 
         self.running = True
-        self.logger.info(f"Client started -> {ip}:{port}")
+        logger.info(f"Client started -> {ip}:{port}")
 
     def client_routine(self) -> None:
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
         if not cap.isOpened():
-            self.logger.error("Camera failed to open")
+            logger.error("Camera failed to open")
             return
 
         cap.set(cv2.CAP_PROP_FPS, 20)
@@ -72,7 +65,7 @@ class UDP_client(UDP_factory):
             ret, frame = cap.read()
 
             if not ret:
-                self.logger.error("Frame capture failed")
+                logger.error("Frame capture failed")
                 self.close()
                 break
 
@@ -90,7 +83,7 @@ class UDP_client(UDP_factory):
 
             self._send_data(frame_raw)
 
-            self.logger.debug(f"Frame sent to {self.ip}:{self.port}")
+            logger.debug(f"Frame sent to {self.ip}:{self.port}")
 
             if cv2.waitKey(1) == ord("q"):
                 self.close()
@@ -111,7 +104,6 @@ class UDP_server(UDP_factory):
     def __init__(self, ip: str, port: int) -> None:
         super().__init__(ip, port)
 
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.recognizer = MediapipeGestureRecoginzer()
         self.queue = Queue(maxsize=1)
 
@@ -122,13 +114,13 @@ class UDP_server(UDP_factory):
             self.BUFF_SIZE
         )
 
-        self.logger.info("Server initialized")
+        logger.info("Server initialized")
 
     def start_server(self) -> None:
         self.socket.bind((self.ip, self.port))
         self.socket.settimeout(1.0)  # allows recvfrom to unblock periodically
         self.running = True
-        self.logger.info(f"Server listening on {self.ip}:{self.port}")
+        logger.info(f"Server listening on {self.ip}:{self.port}")
 
     def _receive_data(self) -> np.ndarray:
         packet, _ = self.socket.recvfrom(self.BUFF_SIZE)

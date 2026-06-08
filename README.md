@@ -1,31 +1,31 @@
-# Sterowanie odtwarzaczem mediów gestami dłoni
+# Hand Gesture Media Player Control
 
-## Opis
+## Description
 
-Aplikacja umożliwia zdalne sterowanie odtwarzaczem mediów za pomocą rozpoznawania gestów dłoni. Serwer przetwarza obraz z kamery klienta i wysyła odpowiednie klawisze multimedialne.
+A Python application that lets you control a media player remotely using hand gesture recognition. The server processes the camera feed from the client and sends the corresponding media key presses.
 
-Obsługiwane gesty:
+Supported gestures:
 
-| Gest | Akcja |
-|------|-------|
-| Pointing Up + ruch w prawo | Następny utwór |
-| Pointing Up + ruch w lewo | Poprzedni utwór |
-| Closed Fist | Odtwarzanie / pauza |
-| Thumb Up | Głośność w górę |
-| Thumb Down | Głośność w dół |
+| Gesture | Action |
+|---------|--------|
+| Pointing Up + swipe right | Next track |
+| Pointing Up + swipe left | Previous track |
+| Closed Fist | Play / pause |
+| Thumb Up | Volume up |
+| Thumb Down | Volume down |
 
-## Wymagania wstępne
+## Prerequisites
 
-- Python 3.10 lub nowszy
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) – menedżer pakietów
+- Python 3.10 or newer
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) — package manager
 
-> **Modele MediaPipe** są pobierane automatycznie przy pierwszym uruchomieniu serwera. Nie trzeba nic robić ręcznie.
+> **MediaPipe models** are downloaded automatically on the first server run. You can also download them manually with `uv run download_models.py`.
 
 ---
 
-## Sposób 1 – uruchamianie z uv (tryb deweloperski)
+## Option 1 — run with uv (development mode)
 
-### 1. Zainstaluj uv
+### 1. Install uv
 
 ```bash
 # Windows (PowerShell)
@@ -35,47 +35,49 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2. Zainstaluj zależności
+### 2. Install dependencies
 
-W katalogu projektu uruchom:
+In the project directory run:
 
 ```bash
 uv sync
 ```
 
-uv automatycznie tworzy wirtualne środowisko i instaluje wszystkie zależności z pliku `pyproject.toml`.
+uv automatically creates a virtual environment and installs all dependencies from `pyproject.toml`.
 
-### 3. Uruchom serwer
+### 3. Start the server
 
 ```bash
 uv run server_demo.py
 ```
 
-Opcjonalnie z własnym adresem IP i portem:
+Optionally with a custom IP and port:
 
 ```bash
 uv run server_demo.py --ip 192.168.1.10 --port 9999
 ```
 
-### 4. Uruchom klienta (w osobnym terminalu)
+### 4. Start the client (in a separate terminal)
 
 ```bash
 uv run client_demo.py
 ```
 
-Opcjonalnie ze wskazaniem adresu serwera:
+Optionally pointing at the server address:
 
 ```bash
 uv run client_demo.py --ip 192.168.1.10 --port 9999
 ```
 
-> **Uwaga:** serwer i klient muszą być uruchomione w osobnych terminalach.
+> **Note:** server and client must be run in separate terminals.
+
+Pressing **Ctrl+C** on the server will shut it down cleanly and save gesture session statistics to `stats.txt`.
 
 ---
 
-## Sposób 2 – instalacja z paczki wheel
+## Option 2 — install from a wheel package
 
-### 1. Zbuduj paczkę
+### 1. Build the package
 
 ```bash
 # Windows
@@ -86,23 +88,23 @@ chmod +x build.sh
 ./build.sh
 ```
 
-Plik `.whl` zostanie wygenerowany w folderze `dist/`.
+The `.whl` file will be generated in the `dist/` folder.
 
-### 2. Zainstaluj paczkę
+### 2. Install the package
 
 ```bash
 pip install dist/hand_tracking_media_player_control-0.1.0-*.whl
 ```
 
-Lub przy użyciu uv:
+Or using uv:
 
 ```bash
 uv pip install dist/hand_tracking_media_player_control-0.1.0-*.whl
 ```
 
-### 3. Uruchom skrypty
+### 3. Run the scripts
 
-Po instalacji paczki uruchom skrypty z katalogu projektu (modele zostaną pobrane automatycznie przy pierwszym starcie):
+After installing the package, run the scripts from the project directory (models are downloaded automatically on first start):
 
 ```bash
 python server_demo.py
@@ -111,20 +113,52 @@ python client_demo.py
 
 ---
 
-## Struktura projektu
+## Benchmarks
+
+The `benchmarks/` folder contains scripts for evaluating the gesture recognizer. Before running the confusion matrix or lighting benchmarks you need to collect a labelled dataset first.
+
+### 1. Collect dataset
+
+Opens the webcam and records 40 frames per gesture (Thumb_Up, Thumb_Down, Closed_Fist). Repeat for each gesture when prompted.
+
+```bash
+uv run benchmarks/collect_dataset.py
+```
+
+### 2. Run benchmarks
+
+```bash
+uv run benchmarks/benchmark_confusion.py   # accuracy and confusion matrix
+uv run benchmarks/benchmark_lighting.py    # accuracy vs. brightness offset
+uv run benchmarks/benchmark_latency.py     # processing time statistics
+```
+
+Results (PNG plots + TXT reports) are saved to `benchmarks/results/`.
+
+---
+
+## Project structure
 
 ```
 handTrackingMediaPlayerControl/
 ├── helpers/
 │   ├── __init__.py
-│   ├── UDP_factory.py          # Klasy klienta i serwera UDP
-│   └── mediapipe_recognizer.py # Rozpoznawanie gestów MediaPipe
-├── model/                      # Tworzone automatycznie przy pierwszym starcie (w .gitignore)
+│   ├── UDP_factory.py              # UDP client and server classes
+│   └── mediapipe_recognizer.py     # MediaPipe gesture recognition + session metrics
+├── benchmarks/
+│   ├── collect_dataset.py          # Webcam dataset collection tool
+│   ├── benchmark_confusion.py      # Confusion matrix benchmark
+│   ├── benchmark_lighting.py       # Lighting robustness benchmark
+│   ├── benchmark_latency.py        # Latency benchmark
+│   ├── dataset/                    # Captured gesture images (git-ignored)
+│   └── results/                    # Benchmark outputs — plots and reports (git-ignored)
+├── model/                          # Created automatically on first run (git-ignored)
 │   ├── gesture_recognizer.task
 │   └── hand_landmarker.task
-├── server_demo.py              # Punkt startowy serwera
-├── client_demo.py              # Punkt startowy klienta
-├── pyproject.toml              # Konfiguracja projektu i zależności
-├── build.bat                   # Skrypt budowania (Windows)
-└── build.sh                    # Skrypt budowania (macOS/Linux)
+├── server_demo.py                  # Server entry point
+├── client_demo.py                  # Client entry point
+├── download_models.py              # Manual model download script
+├── pyproject.toml                  # Project config and dependencies
+├── build.bat                       # Build script (Windows)
+└── build.sh                        # Build script (macOS/Linux)
 ```

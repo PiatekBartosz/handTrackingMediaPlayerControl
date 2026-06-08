@@ -1,15 +1,10 @@
-"""
-Skrypt pobierający modele MediaPipe wymagane przez projekt.
-
-Użycie:
-    uv run download_models.py
-    # lub
-    python download_models.py
-"""
-
-import urllib.request
-import os
 import sys
+import os
+import urllib.request
+from loguru import logger
+
+logger.remove()
+logger.add(sys.stderr, format="{time:HH:mm:ss} | {level:<8} | {message}")
 
 MODELS = {
     "gesture_recognizer.task": (
@@ -29,22 +24,24 @@ def download(name: str, url: str) -> None:
     dest = os.path.join(MODEL_DIR, name)
 
     if os.path.exists(dest):
-        print(f"[POMIŃ]  {name} – już istnieje")
+        logger.info(f"{name} already exists, skipping")
         return
 
-    print(f"[POBIERZ] {name} ...", end=" ", flush=True)
+    logger.info(f"Downloading {name} ...")
 
     def progress(count, block_size, total_size):
         if total_size > 0:
             pct = int(count * block_size * 100 / total_size)
-            print(f"\r[POBIERZ] {name} ... {min(pct, 100)}%", end="", flush=True)
+            print(f"\r  {name}: {min(pct, 100)}%", end="", flush=True)
 
     try:
         urllib.request.urlretrieve(url, dest, reporthook=progress)
         size_mb = os.path.getsize(dest) / 1_048_576
-        print(f"\r[OK]     {name} ({size_mb:.1f} MB)")
+        print()
+        logger.success(f"{name} ({size_mb:.1f} MB)")
     except Exception as exc:
-        print(f"\r[BŁĄD]   {name}: {exc}")
+        print()
+        logger.error(f"{name}: {exc}")
         if os.path.exists(dest):
             os.remove(dest)
         sys.exit(1)
@@ -52,9 +49,9 @@ def download(name: str, url: str) -> None:
 
 if __name__ == "__main__":
     os.makedirs(MODEL_DIR, exist_ok=True)
-    print(f"Folder docelowy: {MODEL_DIR}\n")
+    logger.info(f"Target directory: {MODEL_DIR}")
 
     for model_name, model_url in MODELS.items():
         download(model_name, model_url)
 
-    print("\nGotowe. Możesz teraz uruchomić serwer.")
+    logger.success("All models ready.")

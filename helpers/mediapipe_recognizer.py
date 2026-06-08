@@ -8,6 +8,7 @@ import time
 import urllib.request
 from pathlib import Path
 from pynput.keyboard import Key, Controller
+from loguru import logger
 import threading
 from queue import Queue, Empty
 from collections import defaultdict
@@ -31,26 +32,25 @@ _MODEL_URLS = {
 
 
 def _ensure_model(filename: str) -> str:
-    """Zwraca ścieżkę do pliku modelu, pobierając go jeśli nie istnieje."""
     _MODEL_DIR.mkdir(exist_ok=True)
     dest = _MODEL_DIR / filename
     if not dest.exists():
         url = _MODEL_URLS[filename]
-        print(f"[MediaPipe] Pobieranie modelu {filename} ...", flush=True)
+        logger.info(f"Downloading model {filename} ...")
 
         def _progress(count, block, total):
             if total > 0:
                 pct = min(int(count * block * 100 / total), 100)
-                print(f"\r[MediaPipe] {filename}: {pct}%", end="", flush=True)
+                print(f"\r  {filename}: {pct}%", end="", flush=True)
 
         urllib.request.urlretrieve(url, dest, reporthook=_progress)
         size_mb = dest.stat().st_size / 1_048_576
-        print(f"\r[MediaPipe] Pobrano {filename} ({size_mb:.1f} MB)    ")
+        print()
+        logger.success(f"Downloaded {filename} ({size_mb:.1f} MB)")
     return str(dest)
 
 
 class GestureMetrics:
-    """Tracks per-gesture confidence scores and frame-level detection rates."""
 
     _COL = 58  # table width
 
@@ -145,7 +145,6 @@ class GestureMetrics:
     # ------------------------------------------------------------------
 
     def start_console_reporter(self, interval: float = 5.0) -> None:
-        """Starts a daemon thread that reprints stats to the console every `interval` seconds."""
         self._reporter_running = True
 
         def _loop():
@@ -168,16 +167,14 @@ class GestureMetrics:
     # ------------------------------------------------------------------
 
     def print_summary(self) -> None:
-        """Prints the final metrics table to stdout."""
         print("\n" + self._build_table(ts=time.strftime("%Y-%m-%d %H:%M:%S")))
 
     def save_to_file(self, path: str = "stats.txt") -> None:
-        """Saves the final metrics table to a text file."""
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
         content = self._build_table(ts=ts)
         with open(path, "w", encoding="utf-8") as f:
             f.write(content + "\n")
-        print(f"[INFO] Statystyki zapisane do: {path}")
+        logger.success(f"Stats saved to: {path}")
 
 
 class KeypressThread(threading.Thread):

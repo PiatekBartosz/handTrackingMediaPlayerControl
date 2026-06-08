@@ -1,10 +1,14 @@
-from helpers.UDP_factory import UDP_server
-from argparse import ArgumentParser
+import sys
 import threading
 import socket
 import time
+from argparse import ArgumentParser
+from loguru import logger
+from helpers.UDP_factory import UDP_server
 
 if __name__ == "__main__":
+    logger.remove()
+    logger.add(sys.stderr, format="{time:HH:mm:ss} | {level:<8} | {message}")
     parser = ArgumentParser()
     parser.add_argument("-i", "--ip", help="Server ip", default="localhost", type=str)
     parser.add_argument("-p", "--port", help="Server port", default=9999, type=int)
@@ -36,7 +40,7 @@ if __name__ == "__main__":
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print("\n[INFO] Shutting down...")
+        logger.info("Shutting down...")
 
         server.running = False
         server.recognizer.mediakeys_thread.running = False
@@ -48,4 +52,4 @@ if __name__ == "__main__":
 
         server.recognizer.metrics.print_summary()
         server.recognizer.metrics.save_to_file("stats.txt")
-        print("[INFO] Server stopped cleanly.")
+        logger.success("Server stopped cleanly.")

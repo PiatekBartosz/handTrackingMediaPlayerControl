@@ -1,6 +1,11 @@
-from helpers.UDP_factory import UDP_client
+import sys
 import argparse
 import socket
+from loguru import logger
+from helpers.UDP_factory import UDP_client
+
+logger.remove()
+logger.add(sys.stderr, format="{time:HH:mm:ss} | {level:<8} | {message}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -24,14 +29,12 @@ if __name__ == "__main__":
         client.client_routine()
 
     except KeyboardInterrupt:
-        print("\n[INFO] Client shutting down...")
+        logger.info("Client shutting down...")
 
-        # optional: if your client has a running flag
         if hasattr(client, "running"):
             client.running = False
 
-        # close socket if exists
         if hasattr(client, "sock"):
             client.sock.close()
 
-        print("[INFO] Client stopped.")
+        logger.info("Client stopped.")

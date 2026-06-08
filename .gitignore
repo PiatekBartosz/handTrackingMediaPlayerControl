@@ -8,4 +8,6 @@ dist/
 *.egg-info/
 .uv/
 model/
+benchmarks/dataset/
+benchmarks/results/
 
